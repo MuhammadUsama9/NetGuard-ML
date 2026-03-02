@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NetGuard-ML | AI Network Security Dashboard</title>
+  <meta name="description" content="Real-time AI-powered network traffic monitoring and threat detection dashboard" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- ╔══════════════════════════════════╗ -->
+  <!-- ║           SIDEBAR                ║ -->
+  <!-- ╚══════════════════════════════════╝ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="20" cy="20" r="18" stroke="url(#grad1)" stroke-width="2"/>
+          <path d="M20 8 L28 14 L28 22 C28 27 24 31 20 32 C16 31 12 27 12 22 L12 14 Z" fill="url(#grad1)" opacity="0.8"/>
+          <path d="M17 20 L19 22 L24 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs>
+            <linearGradient id="grad1" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#00d4ff"/>
+              <stop offset="100%" stop-color="#7c3aed"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">NetGuard<span class="brand-ml">ML</span></span>
+        <span class="brand-tagline">AI Security Platform</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-tab="dashboard" id="nav-dashboard">
+        <span class="nav-icon">⎈</span>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" data-tab="predict" id="nav-predict">
+        <span class="nav-icon">⚡</span>
+        <span>Analyzer</span>
+      </a>
+      <a href="#" class="nav-item" data-tab="logs" id="nav-logs">
+        <span class="nav-icon">◉</span>
+        <span>Traffic Logs</span>
+        <span class="badge" id="log-badge">0</span>
+      </a>
+      <a href="#" class="nav-item" data-tab="alerts" id="nav-alerts">
+        <span class="nav-icon">▲</span>
+        <span>Alerts</span>
+        <span class="badge danger" id="alert-badge">0</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="service-grid">
+        <div class="svc-dot" title="API Service">
+          <span class="dot" id="dot-api"></span>
+          <span class="svc-label">API</span>
+        </div>
+        <div class="svc-dot" title="Logger Service">
+          <span class="dot" id="dot-logger"></span>
+          <span class="svc-label">Logger</span>
+        </div>
+        <div class="svc-dot" title="Alert Service">
+          <span class="dot" id="dot-alerts"></span>
+          <span class="svc-label">Alerts</span>
+        </div>
+        <div class="svc-dot" title="Stats Service">
+          <span class="dot" id="dot-stats"></span>
+          <span class="svc-label">Stats</span>
+        </div>
+      </div>
+      <span class="version-tag">v2.0.0 · Docker</span>
+    </div>
+  </aside>
+
+  <!-- ╔══════════════════════════════════╗ -->
+  <!-- ║            MAIN AREA             ║ -->
+  <!-- ╚══════════════════════════════════╝ -->
+  <main class="main">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menuToggle">☰</button>
+        <div class="page-title" id="pageTitle">Dashboard</div>
+      </div>
+      <div class="topbar-right">
+        <div class="live-indicator">
+          <span class="pulse-dot"></span>
+          <span>LIVE</span>
+        </div>
+        <div class="time-display" id="timeDisplay"></div>
+      </div>
+    </header>
+
+    <!-- ══ TAB: DASHBOARD ══ -->
+    <section class="tab-content active" id="tab-dashboard">
+
+      <!-- KPI CARDS -->
+      <div class="kpi-grid">
+        <div class="kpi-card" id="kpi-total">
+          <div class="kpi-icon kpi-cyan">📡</div>
+          <div class="kpi-data">
+            <div class="kpi-value" id="kpi-total-val">0</div>
+            <div class="kpi-label">Total Analyzed</div>
+          </div>
+          <div class="kpi-trend" id="kpi-total-trend"></div>
+        </div>
+        <div class="kpi-card" id="kpi-threats">
+          <div class="kpi-icon kpi-red">🚨</div>
+          <div class="kpi-data">
+            <div class="kpi-value" id="kpi-threats-val">0</div>
+            <div class="kpi-label">Threats Detected</div>
+          </div>
+          <div class="kpi-trend danger" id="kpi-threats-trend"></div>
+        </div>
+        <div class="kpi-card" id="kpi-rate">
+          <div class="kpi-icon kpi-purple">📊</div>
+          <div class="kpi-data">
+            <div class="kpi-value" id="kpi-rate-val">0%</div>
+            <div class="kpi-label">Threat Rate</div>
+          </div>
+          <div class="kpi-trend" id="kpi-rate-trend"></div>
+        </div>
+        <div class="kpi-card" id="kpi-alerts">
+          <div class="kpi-icon kpi-orange">⚡</div>
+          <div class="kpi-data">
+            <div class="kpi-value" id="kpi-alerts-val">0</div>
+            <div class="kpi-label">Active Alerts</div>
+          </div>
+          <div class="kpi-trend danger" id="kpi-alert-trend"></div>
+        </div>
+      </div>
+
+      <!-- CHARTS -->
+      <div class="charts-grid">
+        <div class="card chart-card wide">
+          <div class="card-header">
+            <h3 class="card-title">Traffic Over Time</h3>
+            <div class="chart-legend">
+              <span class="legend-dot cyan"></span><span>Benign</span>
+              <span class="legend-dot red"></span><span>Malicious</span>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="trafficChart"></canvas>
+          </div>
+        </div>
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3 class="card-title">Traffic Mix</h3>
+          </div>
+          <div class="chart-wrap donut-wrap">
+            <canvas id="donutChart"></canvas>
+            <div class="donut-center">
+              <div class="donut-pct" id="donutPct">–</div>
+              <div class="donut-sub">Benign</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIVE ALERT FEED -->
+      <div class="card live-feed-card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <span class="pulse-dot small"></span>&nbsp;Live Alert Feed
+          </h3>
+          <button class="btn-ghost" id="clearFeedBtn">Clear</button>
+        </div>
+        <div class="live-feed" id="liveFeed">
+          <div class="feed-empty">Waiting for traffic events…</div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ══ TAB: ANALYZER ══ -->
+    <section class="tab-content" id="tab-predict">
+      <div class="analyzer-grid">
+        <div class="card predict-card">
+          <div class="card-header">
+            <h3 class="card-title">⚡ Single Flow Analyzer</h3>
+          </div>
+          <form id="predictForm" class="predict-form">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Packet Length (bytes)</label>
+                <input type="number" id="f-packet_length" placeholder="e.g. 1200" value="1200" min="20" max="1500" />
+                <span class="hint">20 – 1500 bytes</span>
+              </div>
+              <div class="form-group">
+                <label>Inter-Arrival Time (s)</label>
+                <input type="number" id="f-inter_arrival_time" placeholder="e.g. 0.5" value="0.5" step="0.0001" min="0" />
+                <span class="hint">Seconds between packets</span>
+              </div>
+              <div class="form-group">
+                <label>Protocol TCP</label>
+                <select id="f-protocol_tcp">
+                  <option value="1">TCP (1)</option>
+                  <option value="0">No (0)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Protocol UDP</label>
+                <select id="f-protocol_udp">
+                  <option value="0">No (0)</option>
+                  <option value="1">UDP (1)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Source Port</label>
+                <input type="number" id="f-source_port" placeholder="e.g. 54321" value="54321" min="0" max="65535" />
+              </div>
+              <div class="form-group">
+                <label>Destination Port</label>
+                <input type="number" id="f-dest_port" placeholder="e.g. 443" value="443" min="0" max="65535" />
+              </div>
+            </div>
+
+            <div class="quick-presets">
+              <span class="preset-label">Quick Presets:</span>
+              <button type="button" class="preset-btn" data-preset="benign">HTTPS Traffic</button>
+              <button type="button" class="preset-btn danger" data-preset="ddos">UDP Flood DDoS</button>
+              <button type="button" class="preset-btn warning" data-preset="scan">Port Scan</button>
+            </div>
+
+            <button type="submit" class="btn-primary" id="analyzeBtn">
+              <span class="btn-icon">▶</span> Analyze Flow
+            </button>
+          </form>
+
+          <!-- Result -->
+          <div class="predict-result hidden" id="predictResult">
+            <div class="result-inner">
+              <div class="result-badge" id="resultBadge"></div>
+              <div class="result-prob">
+                <div class="prob-bar-wrap">
+                  <div class="prob-bar" id="probBar"></div>
+                </div>
+                <div class="prob-labels">
+                  <span>BENIGN</span><span id="probValue">–</span><span>MALICIOUS</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Batch Analyzer -->
+        <div class="card batch-card">
+          <div class="card-header">
+            <h3 class="card-title">⚡ Batch Analyzer</h3>
+          </div>
+          <p class="card-desc">Paste JSON array of flows to run batch prediction.</p>
+          <textarea id="batchInput" class="batch-textarea" rows="10" placeholder='[
+  {
+    "packet_length": 1200,
+    "inter_arrival_time": 0.5,
+    "protocol_tcp": 1,
+    "protocol_udp": 0,
+    "source_port": 54321,
+    "dest_port": 443
+  }
+]'></textarea>
+          <button class="btn-primary" id="batchBtn">Run Batch</button>
+          <div class="batch-results hidden" id="batchResults"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TAB: LOGS ══ -->
+    <section class="tab-content" id="tab-logs">
+      <div class="card logs-card">
+        <div class="card-header">
+          <h3 class="card-title">◉ Traffic Logs</h3>
+          <div class="logs-controls">
+            <select id="logFilter" class="filter-select">
+              <option value="">All</option>
+              <option value="BENIGN">Benign</option>
+              <option value="MALICIOUS">Malicious</option>
+            </select>
+            <button class="btn-ghost" id="refreshLogsBtn">↻ Refresh</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="logsTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Time</th>
+                <th>Label</th>
+                <th>Probability</th>
+                <th>Packet Len</th>
+                <th>Protocol</th>
+                <th>Src Port</th>
+                <th>Dst Port</th>
+                <th>Source IP</th>
+              </tr>
+            </thead>
+            <tbody id="logsBody">
+              <tr><td colspan="9" class="empty-row">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination" id="logsPagination"></div>
+      </div>
+    </section>
+
+    <!-- ══ TAB: ALERTS ══ -->
+    <section class="tab-content" id="tab-alerts">
+      <div class="card alerts-card">
+        <div class="card-header">
+          <h3 class="card-title">▲ Alert History</h3>
+          <div class="alert-count-badge" id="alertCountBadge">0 alerts</div>
+        </div>
+        <div class="alerts-list" id="alertsList">
+          <div class="empty-state">No alerts recorded yet. Run predictions to generate traffic.</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
