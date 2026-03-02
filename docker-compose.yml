@@ -1,0 +1,126 @@
+services:
+
+  # ─────────────────────────────────────────────────────────
+  # Network Sniffer (Traffic Capture)
+  # ─────────────────────────────────────────────────────────
+  sniffer:
+    build: ./services/sniffer
+    container_name: netguard-sniffer
+    restart: unless-stopped
+    networks:
+      - netguard-net
+    environment:
+      - API_URL=http://api:5000/predict
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────────────────────
+  # ML Inference API
+  # ─────────────────────────────────────────────────────────
+  api:
+    build: ./services/api
+    container_name: netguard-api
+    restart: unless-stopped
+    networks:
+      - netguard-net
+    environment:
+      - LOGGER_URL=http://logger:5001
+      - ALERT_URL=http://alerts:5002
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ─────────────────────────────────────────────────────────
+  # Traffic Logger (SQLite)
+  # ─────────────────────────────────────────────────────────
+  logger:
+    build: ./services/logger
+    container_name: netguard-logger
+    restart: unless-stopped
+    networks:
+      - netguard-net
+    volumes:
+      - logger-data:/data
+    environment:
+      - DB_PATH=/data/netguard.db
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ─────────────────────────────────────────────────────────
+  # Real-time Alert Service (WebSocket)
+  # ─────────────────────────────────────────────────────────
+  alerts:
+    build: ./services/alerts
+    container_name: netguard-alerts
+    restart: unless-stopped
+    networks:
+      - netguard-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5002/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ─────────────────────────────────────────────────────────
+  # Statistics Aggregator
+  # ─────────────────────────────────────────────────────────
+  stats:
+    build: ./services/stats
+    container_name: netguard-stats
+    restart: unless-stopped
+    networks:
+      - netguard-net
+    environment:
+      - LOGGER_URL=http://logger:5001
+      - ALERT_URL=http://alerts:5002
+    depends_on:
+      logger:
+        condition: service_healthy
+      alerts:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5003/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ─────────────────────────────────────────────────────────
+  # Frontend Dashboard (Nginx)
+  # ─────────────────────────────────────────────────────────
+  frontend:
+    build: ./frontend
+    container_name: netguard-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - netguard-net
+    depends_on:
+      api:
+        condition: service_healthy
+      logger:
+        condition: service_healthy
+      alerts:
+        condition: service_healthy
+      stats:
+        condition: service_healthy
+
+# ─────────────────────────────────────────────────────────
+# Volumes & Networks
+# ─────────────────────────────────────────────────────────
+volumes:
+  logger-data:
+
+networks:
+  netguard-net:
+    driver: bridge
