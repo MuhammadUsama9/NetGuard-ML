@@ -35,7 +35,7 @@ def train(args):
     
     # Data & Model
     train_loader, val_loader = get_dataloaders(num_samples=args.num_samples, batch_size=args.batch_size, seed=args.seed)
-    model = TrafficClassifierMLP(input_dim=6, hidden_dim=args.hidden_dim, dropout_rate=args.dropout).to(device)
+    model = TrafficClassifierMLP(input_dim=7, hidden_dim=args.hidden_dim, dropout_rate=args.dropout).to(device)
     
     # Loss & Optimizer
     # We minimize BCEWithLogitsLoss, symbolically: 

@@ -64,3 +64,4 @@ Desktop.ini
 # Web
 node_modules/
 .npm/
+.venv/

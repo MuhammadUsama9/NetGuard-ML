@@ -15,5 +15,5 @@ def test_dataloader_shapes():
     train_dl, val_dl = get_dataloaders(num_samples=1000, batch_size=16)
     
     x, y = next(iter(train_dl))
-    assert x.shape == (16, 6), "Feature batch shape should be (batch_size, num_features)"
+    assert x.shape == (16, 7), "Feature batch shape should be (batch_size, num_features)"
     assert y.shape == (16, 1), "Label batch shape should be (batch_size, 1)"

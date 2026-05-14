@@ -12,6 +12,7 @@ class NetworkTrafficDataset(Dataset):
       3: protocol_udp
       4: source_port
       5: destination_port
+      6: packets_per_sec
     """
     def __init__(self, num_samples=10000, seed=42):
         self.num_samples = num_samples
@@ -25,21 +26,21 @@ class NetworkTrafficDataset(Dataset):
         benign_samples = num_samples // 2
         
         # We need a much wider variance for benign to not overfit "normal" to just port 80/443 and exactly 500 bytes.
-        # loc:   [packet_length, inter_arrival_time, protocol_tcp, protocol_udp, source_port, dest_port]
+        # loc:   [packet_length, inter_arrival_time, protocol_tcp, protocol_udp, source_port, dest_port, packets_per_sec]
         # We will use high standard deviations for lengths and source ports.
         benign_features = np.random.normal(
-            loc=[700, 0.5, 1, 0, 40000, 443], 
-            scale=[600, 0.5, 0.5, 0.5, 20000, 200], # Big variance
-            size=(benign_samples, 6)
+            loc=[700, 0.5, 1, 0, 40000, 443, 5], 
+            scale=[600, 0.5, 0.5, 0.5, 20000, 200, 2], # Big variance
+            size=(benign_samples, 7)
         )
         benign_labels = np.zeros(benign_samples)
         
         # Malicious traffic (DDoS-like characteristics: very small packets, extremely high frequency/low inter-arrival)
         mal_samples = num_samples - benign_samples
         mal_features = np.random.normal(
-            loc=[64, 0.0001, 0, 1, 50000, 80], 
-            scale=[10, 0.00005, 0.1, 0.1, 5000, 0], 
-            size=(mal_samples, 6)
+            loc=[64, 0.0001, 0, 1, 50000, 80, 5000], 
+            scale=[10, 0.00005, 0.1, 0.1, 5000, 0, 1000], 
+            size=(mal_samples, 7)
         )
         mal_labels = np.ones(mal_samples)
         
@@ -49,6 +50,7 @@ class NetworkTrafficDataset(Dataset):
         # Simulated data cleaning: clip non-physical values
         self.features[:, 0] = np.clip(self.features[:, 0], 20, 1500) # packet length
         self.features[:, 1] = np.clip(self.features[:, 1], 0, None)  # inter_arrival_time >= 0
+        self.features[:, 6] = np.clip(self.features[:, 6], 0, None)  # packets_per_sec >= 0
         
         # Ensure exact float32 types for PyTorch
         self.features = torch.tensor(self.features, dtype=torch.float32)
