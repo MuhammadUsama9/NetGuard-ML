@@ -29,7 +29,7 @@ model_loaded = False
 
 def load_model():
     global model, model_loaded
-    m = TrafficClassifierMLP(input_dim=6, hidden_dim=64, dropout_rate=0.2).to(device)
+    m = TrafficClassifierMLP(input_dim=7, hidden_dim=64, dropout_rate=0.2).to(device)
     try:
         checkpoint = torch.load(
             os.path.join(os.path.dirname(__file__), "best_model.pth"),
@@ -54,6 +54,7 @@ def _preprocess(features: list[float]) -> torch.Tensor:
     arr = np.array(features, dtype=np.float32)
     arr[0] = np.clip(arr[0], 20, 1500)   # packet_length
     arr[1] = np.clip(arr[1], 0, None)    # inter_arrival_time
+    arr[6] = np.clip(arr[6], 0, None)    # packets_per_sec
     return torch.tensor(arr, dtype=torch.float32).unsqueeze(0).to(device)
 
 
@@ -81,7 +82,7 @@ def _forward_to_services(payload: dict, is_malicious: bool):
 def _extract_features(data: dict) -> list[float]:
     keys = ["packet_length", "inter_arrival_time",
             "protocol_tcp", "protocol_udp",
-            "source_port", "dest_port"]
+            "source_port", "dest_port", "packets_per_sec"]
     return [float(data[k]) for k in keys]
 
 # ─────────────────────────────────────────────────────────────
@@ -119,6 +120,7 @@ def predict():
             "protocol_udp":       features[3],
             "source_port":        features[4],
             "dest_port":          features[5],
+            "packets_per_sec":    features[6],
         },
         "probability": probability,
         "label": label,
@@ -149,7 +151,7 @@ def predict_batch():
                 "timestamp": time.time(),
                 "features": {k: v for k, v in zip(
                     ["packet_length","inter_arrival_time","protocol_tcp",
-                     "protocol_udp","source_port","dest_port"], features)},
+                     "protocol_udp","source_port","dest_port","packets_per_sec"], features)},
                 "probability": probability,
                 "label": label,
                 "source_ip": request.remote_addr,
@@ -166,13 +168,13 @@ def predict_batch():
 def model_info():
     return jsonify({
         "architecture": "TrafficClassifierMLP",
-        "input_dim": 6,
+        "input_dim": 7,
         "hidden_dim": 64,
         "dropout_rate": 0.2,
         "features": [
             "packet_length", "inter_arrival_time",
             "protocol_tcp", "protocol_udp",
-            "source_port", "dest_port"
+            "source_port", "dest_port", "packets_per_sec"
         ],
         "classes": ["BENIGN", "MALICIOUS"],
         "threshold": 0.5,

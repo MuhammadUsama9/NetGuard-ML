@@ -8,7 +8,7 @@ class TrafficClassifierMLP(nn.Module):
     does not require spatial (CNN) or sequential (RNN/LSTM) inductive biases, 
     making MLP computationally cheap and interpretative.
     """
-    def __init__(self, input_dim=6, hidden_dim=64, dropout_rate=0.2):
+    def __init__(self, input_dim=7, hidden_dim=64, dropout_rate=0.2):
         super().__init__()
         
         self.net = nn.Sequential(

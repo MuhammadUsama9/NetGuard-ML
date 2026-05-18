@@ -12,6 +12,17 @@ logger = logging.getLogger("sniffer")
 API_URL = os.environ.get("API_URL", "http://api:5000/predict")
 last_packet_time = None
 time_lock = threading.Lock()
+flow_history = {}
+
+def get_pps(src_ip, dst_ip, source_port, dest_port, protocol_name):
+    current_time = time.time()
+    flow_key = (src_ip, dst_ip, source_port, dest_port, protocol_name)
+    with time_lock:
+        if flow_key not in flow_history:
+            flow_history[flow_key] = []
+        flow_history[flow_key].append(current_time)
+        flow_history[flow_key] = [t for t in flow_history[flow_key] if current_time - t <= 1.0]
+        return len(flow_history[flow_key])
 
 def send_to_api(payload):
     try:
@@ -38,9 +49,15 @@ def process_packet(packet):
     if protocol_tcp:
         source_port = packet[TCP].sport
         dest_port = packet[TCP].dport
+        proto_name = "TCP"
     else:
         source_port = packet[UDP].sport
         dest_port = packet[UDP].dport
+        proto_name = "UDP"
+
+    src_ip = packet[IP].src
+    dst_ip = packet[IP].dst
+    packets_per_sec = get_pps(src_ip, dst_ip, source_port, dest_port, proto_name)
 
     payload = {
         "packet_length": packet_length,
@@ -48,7 +65,8 @@ def process_packet(packet):
         "protocol_tcp": protocol_tcp,
         "protocol_udp": protocol_udp,
         "source_port": source_port,
-        "dest_port": dest_port
+        "dest_port": dest_port,
+        "packets_per_sec": packets_per_sec
     }
     
     send_to_api(payload)
@@ -71,6 +89,7 @@ def generate_background_traffic():
             protocol_udp = 1 - protocol_tcp
             source_port = random.randint(1024, 65535)
             dest_port = random.choice([22, 80, 443, 8080, 3306])
+            packets_per_sec = random.randint(1000, 6000)
         else:
             packet_length = random.randint(200, 1500)
             inter_arrival_time = random.uniform(0.1, 2.0)
@@ -78,6 +97,7 @@ def generate_background_traffic():
             protocol_udp = 1 - protocol_tcp
             source_port = random.choice([80, 443, 22, 53]) if random.random() > 0.5 else random.randint(1024, 65535)
             dest_port = random.randint(1024, 65535) if source_port in [80, 443, 22, 53] else random.choice([80, 443, 53])
+            packets_per_sec = random.randint(1, 15)
 
         current_time = time.time()
         with time_lock:
@@ -89,7 +109,8 @@ def generate_background_traffic():
             "protocol_tcp": protocol_tcp,
             "protocol_udp": protocol_udp,
             "source_port": source_port,
-            "dest_port": dest_port
+            "dest_port": dest_port,
+            "packets_per_sec": packets_per_sec
         }
         send_to_api(payload)
 

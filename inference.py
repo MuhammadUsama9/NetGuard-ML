@@ -2,14 +2,14 @@ import torch
 import numpy as np
 from model import TrafficClassifierMLP
 
-def predict_single_flow(packet_length, inter_arrival_time, protocol_tcp, protocol_udp, source_port, dest_port):
+def predict_single_flow(packet_length, inter_arrival_time, protocol_tcp, protocol_udp, source_port, dest_port, packets_per_sec):
     """
     Loads the trained model and predicts whether a single network flow is benign or malicious (DDoS).
     """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     # Initialize the model and load the trained weights
-    model = TrafficClassifierMLP(input_dim=6, hidden_dim=64, dropout_rate=0.2).to(device)
+    model = TrafficClassifierMLP(input_dim=7, hidden_dim=64, dropout_rate=0.2).to(device)
     
     try:
         # Load weights
@@ -21,10 +21,11 @@ def predict_single_flow(packet_length, inter_arrival_time, protocol_tcp, protoco
         return
 
     # Prepare the feature tensor
-    features = np.array([packet_length, inter_arrival_time, protocol_tcp, protocol_udp, source_port, dest_port])
+    features = np.array([packet_length, inter_arrival_time, protocol_tcp, protocol_udp, source_port, dest_port, packets_per_sec])
     # Clip just like we did in training
     features[0] = np.clip(features[0], 20, 1500)
     features[1] = np.clip(features[1], 0, None)
+    features[6] = np.clip(features[6], 0, None)
     
     # Needs to be a batch of size 1 (hence unsqueeze)
     feature_tensor = torch.tensor(features, dtype=torch.float32).unsqueeze(0).to(device)
@@ -49,7 +50,8 @@ if __name__ == "__main__":
         packet_length=1200, 
         inter_arrival_time=0.5, 
         protocol_tcp=1, protocol_udp=0, 
-        source_port=54321, dest_port=443
+        source_port=54321, dest_port=443,
+        packets_per_sec=2
     )
     
     print("\n[Test 2] Suspected UDP Flood (DDoS Attack):")
@@ -58,5 +60,6 @@ if __name__ == "__main__":
         packet_length=64, 
         inter_arrival_time=0.0001, 
         protocol_tcp=0, protocol_udp=1, 
-        source_port=50000, dest_port=80
+        source_port=50000, dest_port=80,
+        packets_per_sec=6000
     )

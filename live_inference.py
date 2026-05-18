@@ -8,11 +8,12 @@ from model import TrafficClassifierMLP
 last_packet_time = None
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = None
+flow_history = {} # Maps (src, dst, sport, dport, proto) -> list of timestamps
 
 def load_ai_model():
     """Initializes and loads the trained PyTorch weights."""
     global model
-    model = TrafficClassifierMLP(input_dim=6, hidden_dim=64, dropout_rate=0.2).to(device)
+    model = TrafficClassifierMLP(input_dim=7, hidden_dim=64, dropout_rate=0.2).to(device)
     try:
         checkpoint = torch.load("best_model.pth", map_location=device, weights_only=True)
         model.load_state_dict(checkpoint['model_state_dict'])
@@ -59,12 +60,30 @@ def process_live_packet(packet):
         source_port = packet[UDP].sport
         dest_port = packet[UDP].dport
 
+    proto_name = "TCP" if protocol_tcp else "UDP"
+    src_ip = packet[IP].src
+    dst_ip = packet[IP].dst
+    
+    # 7. Stateful feature: packets_per_sec window
+    flow_key = (src_ip, dst_ip, source_port, dest_port, proto_name)
+    
+    if flow_key not in flow_history:
+        flow_history[flow_key] = []
+        
+    flow_history[flow_key].append(current_time)
+    
+    # Prune timestamps older than 1 second
+    flow_history[flow_key] = [t for t in flow_history[flow_key] if current_time - t <= 1.0]
+    
+    packets_per_sec = len(flow_history[flow_key])
+
     # Prepare features for the ML model
-    features = np.array([packet_length, inter_arrival_time, protocol_tcp, protocol_udp, source_port, dest_port])
+    features = np.array([packet_length, inter_arrival_time, protocol_tcp, protocol_udp, source_port, dest_port, packets_per_sec])
     
     # Clean/Clip data exactly like training
     features[0] = np.clip(features[0], 20, 1500)
     features[1] = np.clip(features[1], 0, None)
+    features[6] = np.clip(features[6], 0, None)
     
     # Convert to PyTorch Tensor (batch size 1)
     feature_tensor = torch.tensor(features, dtype=torch.float32).unsqueeze(0).to(device)
@@ -75,11 +94,8 @@ def process_live_packet(packet):
         probability = torch.sigmoid(output).item()
         
     # Print results to terminal
-    proto_name = "TCP" if protocol_tcp else "UDP"
-    src_ip = packet[IP].src
-    dst_ip = packet[IP].dst
     
-    report = f"[{proto_name}] {src_ip}:{source_port} -> {dst_ip}:{dest_port} | Len: {packet_length} | "
+    report = f"[{proto_name}] {src_ip}:{source_port} -> {dst_ip}:{dest_port} | Len: {packet_length} | PPS: {packets_per_sec} | "
     
     if probability > 0.5:
         print(f"🚨 BOOM! MALICIOUS (Prob: {probability:.1%}) | {report}")
